@@ -166,9 +166,9 @@
       self.inAppBrowserViewController.orientationDelegate = (UIViewController <CDVScreenOrientationDelegate>*)self.viewController;
     }
   }
-  NSLog(@"browserOptions.share %d", browserOptions.share);
-  [self.inAppBrowserViewController showShareButtons:browserOptions.share];
+
   [self.inAppBrowserViewController showNavButtons:browserOptions.nav];
+  [self.inAppBrowserViewController showShareButtons:browserOptions.share];
 
   [self.inAppBrowserViewController showLocationBar:browserOptions.location];
   [self.inAppBrowserViewController showToolBar:browserOptions.toolbar :browserOptions.toolbarposition];
@@ -266,9 +266,8 @@
   if (self.inAppBrowserViewController == nil) {
     NSLog(@"Tried to hide IAB after it was closed.");
     return;
-
-
   }
+
   if (_previousStatusBarStyle == -1) {
     NSLog(@"Tried to hide IAB while already hidden");
     return;
@@ -514,11 +513,11 @@
   _previousStatusBarStyle = -1; // this value was reset before reapplying it. caused statusbar to stay black on ios7
 }
 
-- (void)goFigure
+- (void)share
 {
   CDVPluginResult* pluginResult = [CDVPluginResult
                                    resultWithStatus:CDVCommandStatus_OK
-                                   messageAsDictionary:@{@"type":@"whatever"}];
+                                   messageAsDictionary:@{@"type":@"share"}];
   [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
   [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackId];
 }
@@ -669,10 +668,10 @@
   self.backButton.enabled = YES;
   self.backButton.imageInsets = UIEdgeInsetsZero;
 
-  // sharing is caring ☺️
-  self.shareButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAction target:self action:@selector(goFigure:)];
+  // sharing is caring 😅 -- create a default sharing icon button
+  self.shareButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAction target:self action:@selector(sendShare:)];
   self.shareButton.enabled = YES;
-  self.shareButton.imageInsets = UIEdgeInsetsZero;//    self.shareButton.width = 38.000;
+  self.shareButton.imageInsets = UIEdgeInsetsZero;
 
   [self.toolbar setItems: @[self.closeButton, self.flexibleSpaceButton]];
 
@@ -701,21 +700,24 @@
   [self.toolbar setItems:items];
 }
 
-- (void)showShareButtons:(BOOL)show
-{
-  NSLog(@"showShareButtons %d", show);
-//    self.share = show;
-}
-
 - (void)showNavButtons:(BOOL)show
 {
-  NSLog(@"showNavButtons %d", show);
   if (show == YES) {
-//        [array addObjectsFromArray:@[self.toolbarItems, self.backButton, fixedSpaceButton, self.forwardButto//n]];
     NSMutableArray* items = [self.toolbar.items mutableCopy];
-    [items replaceObjectAtIndex:0 withObject:self.closeButton];
-    // [self.toolbar setItems:items];
-    // [self.toolbar setItems: @[self.toolbarItems, self.backButton, self.fixedSpaceButton, self.forwardButton]];
+    [items addObject:self.backButton];
+    [items addObject:self.fixedSpaceButton];
+    [items addObject:self.forwardButton];
+    [self.toolbar setItems:items];
+  }
+}
+
+- (void)showShareButtons:(BOOL)show
+{
+  if (show == YES) {
+    NSMutableArray* items = [self.toolbar.items mutableCopy];
+    [items addObject:self.fixedSpaceButton];
+    [items addObject:self.shareButton];
+    [self.toolbar setItems:items];
   }
 }
 
@@ -889,9 +891,9 @@
   }
 }
 
-- (void)goFigure:(id)sender
+- (void)sendShare:(id)sender
 {
-  [self.navigationDelegate goFigure];
+  [self.navigationDelegate share];
 }
 
 - (void)goBack:(id)sender
@@ -1048,7 +1050,7 @@
     self.location = YES;
     self.toolbar = YES;
     self.nav = YES;
-    self.share = YES;
+    self.share = NO;
     self.closebuttoncaption = nil;
     self.toolbarposition = kInAppBrowserToolbarBarPositionBottom;
     self.clearcache = NO;

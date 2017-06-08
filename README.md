@@ -118,6 +118,10 @@ instance, or the system browser.
 
     iOS only:
 
+    - __*FOURTH ONLY*__:
+        - __nav__: set to `yes` or `no` to show/hide navigation buttons (defaults to __`yes`__)
+        - __share__: set to `yes` or `no` to show/hide share button (defaults to __`no`__)
+
     - __closebuttoncaption__: set to a string to use as the __Done__ button's caption. Note that you need to localize this value yourself.
     - __disallowoverscroll__: Set to `yes` or `no` (default is `no`). Turns on/off the UIWebViewBounce property.
     - __hidden__: set to `yes` to create the browser and load the page, but not show it. The loadstop event fires when loading is complete. Omit or set to `no` (default) to have the browser open and load normally.
@@ -183,7 +187,7 @@ opened with `target='_blank'`. The rules might look like these
   background: rgba(30,30,30,0.50);
 }
 .inAppBrowserWrap menu li.disabled {
-	color: #777;
+  color: #777;
 }
 ```
 

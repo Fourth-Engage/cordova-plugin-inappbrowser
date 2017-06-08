@@ -67,7 +67,6 @@ interface InAppBrowser extends Window {
      *                  passed an InAppBrowserEvent object as a parameter.
      */
     addEventListener(type: "loadstart", callback: (event: InAppBrowserEvent) => void): void;
-    addEventListener(type: "whatever", callback: (event: InAppBrowserEvent) => void): void;
     /**
      * Adds a listener for an event from the InAppBrowser.
      * @param type      the event to listen for
@@ -124,7 +123,6 @@ interface InAppBrowser extends Window {
      *                  passed an InAppBrowserEvent object as a parameter.
      */
     removeEventListener(type: "loadstart", callback: (event: InAppBrowserEvent) => void): void;
-    removeEventListener(type: "whatever", callback: (event: InAppBrowserEvent) => void): void;
     /**
      * Removes a listener for an event from the InAppBrowser.
      * @param type      The event to stop listening for.
