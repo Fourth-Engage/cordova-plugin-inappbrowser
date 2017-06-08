@@ -2,7 +2,7 @@
 // Project: https://github.com/apache/cordova-plugin-inappbrowser
 // Definitions by: Microsoft Open Technologies Inc <http://msopentech.com>
 // Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped
-// 
+//
 // Copyright (c) Microsoft Open Technologies Inc
 // Licensed under the MIT license.
 
@@ -54,6 +54,7 @@ interface InAppBrowser extends Window {
     onloadstop: (type: InAppBrowserEvent) => void;
     onloaderror: (type: InAppBrowserEvent) => void;
     onexit: (type: InAppBrowserEvent) => void;
+    whatever: (type: InAppBrowserEvent) => void;
     // addEventListener overloads
     /**
      * Adds a listener for an event from the InAppBrowser.
@@ -66,6 +67,7 @@ interface InAppBrowser extends Window {
      *                  passed an InAppBrowserEvent object as a parameter.
      */
     addEventListener(type: "loadstart", callback: (event: InAppBrowserEvent) => void): void;
+    addEventListener(type: "whatever", callback: (event: InAppBrowserEvent) => void): void;
     /**
      * Adds a listener for an event from the InAppBrowser.
      * @param type      the event to listen for
@@ -122,6 +124,7 @@ interface InAppBrowser extends Window {
      *                  passed an InAppBrowserEvent object as a parameter.
      */
     removeEventListener(type: "loadstart", callback: (event: InAppBrowserEvent) => void): void;
+    removeEventListener(type: "whatever", callback: (event: InAppBrowserEvent) => void): void;
     /**
      * Removes a listener for an event from the InAppBrowser.
      * @param type      The event to stop listening for.
