@@ -48,6 +48,8 @@
 
 @property (nonatomic, assign) BOOL location;
 @property (nonatomic, assign) BOOL toolbar;
+@property (nonatomic, assign) BOOL nav;
+@property (nonatomic, assign) BOOL share;
 @property (nonatomic, copy) NSString* closebuttoncaption;
 @property (nonatomic, copy) NSString* toolbarposition;
 @property (nonatomic, assign) BOOL clearcache;
@@ -88,8 +90,11 @@
 @property (nonatomic, strong) IBOutlet UILabel* addressLabel;
 @property (nonatomic, strong) IBOutlet UIBarButtonItem* backButton;
 @property (nonatomic, strong) IBOutlet UIBarButtonItem* forwardButton;
+@property (nonatomic, strong) IBOutlet UIBarButtonItem* shareButton;
 @property (nonatomic, strong) IBOutlet UIActivityIndicatorView* spinner;
 @property (nonatomic, strong) IBOutlet UIToolbar* toolbar;
+@property (nonatomic, strong) IBOutlet UIBarButtonItem* flexibleSpaceButton;
+@property (nonatomic, strong) IBOutlet UIBarButtonItem* fixedSpaceButton;
 
 @property (nonatomic, weak) id <CDVScreenOrientationDelegate> orientationDelegate;
 @property (nonatomic, weak) CDVInAppBrowser* navigationDelegate;
@@ -97,6 +102,8 @@
 
 - (void)close;
 - (void)navigateTo:(NSURL*)url;
+- (void)showShareButtons:(BOOL)show;
+- (void)showNavButtons:(BOOL)show;
 - (void)showLocationBar:(BOOL)show;
 - (void)showToolBar:(BOOL)show : (NSString *) toolbarPosition;
 - (void)setCloseButtonTitle:(NSString*)title;

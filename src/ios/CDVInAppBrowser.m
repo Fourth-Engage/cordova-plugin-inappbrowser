@@ -119,7 +119,7 @@
 - (void)openInInAppBrowser:(NSURL*)url withOptions:(NSString*)options
 {
     CDVInAppBrowserOptions* browserOptions = [CDVInAppBrowserOptions parseOptions:options];
-
+    
     if (browserOptions.clearcache) {
         NSHTTPCookie *cookie;
         NSHTTPCookieStorage *storage = [NSHTTPCookieStorage sharedHTTPCookieStorage];
@@ -159,6 +159,9 @@
             self.inAppBrowserViewController.orientationDelegate = (UIViewController <CDVScreenOrientationDelegate>*)self.viewController;
         }
     }
+    NSLog(@"browserOptions.share %d", browserOptions.share);
+    [self.inAppBrowserViewController showShareButtons:browserOptions.share];
+    [self.inAppBrowserViewController showNavButtons:browserOptions.nav];
 
     [self.inAppBrowserViewController showLocationBar:browserOptions.location];
     [self.inAppBrowserViewController showToolBar:browserOptions.toolbar :browserOptions.toolbarposition];
@@ -504,6 +507,16 @@
     _previousStatusBarStyle = -1; // this value was reset before reapplying it. caused statusbar to stay black on ios7
 }
 
+- (void)goFigure
+{
+    CDVPluginResult* pluginResult = [CDVPluginResult
+                                     resultWithStatus:CDVCommandStatus_OK
+                                     messageAsDictionary:@{@"type":@"whatever"}];
+    [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackId];
+}
+
+
 @end
 
 #pragma mark CDVInAppBrowserViewController
@@ -579,10 +592,10 @@
     self.closeButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(close)];
     self.closeButton.enabled = YES;
 
-    UIBarButtonItem* flexibleSpaceButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
+    self.flexibleSpaceButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
 
-    UIBarButtonItem* fixedSpaceButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFixedSpace target:nil action:nil];
-    fixedSpaceButton.width = 20;
+    self.fixedSpaceButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFixedSpace target:nil action:nil];
+    self.fixedSpaceButton.width = 20;
 
     float toolbarY = toolbarIsAtBottom ? self.view.bounds.size.height - TOOLBAR_HEIGHT : 0.0;
     CGRect toolbarFrame = CGRectMake(0.0, toolbarY, self.view.bounds.size.width, TOOLBAR_HEIGHT);
@@ -641,8 +654,11 @@
     self.backButton = [[UIBarButtonItem alloc] initWithTitle:backArrowString style:UIBarButtonItemStylePlain target:self action:@selector(goBack:)];
     self.backButton.enabled = YES;
     self.backButton.imageInsets = UIEdgeInsetsZero;
-
-    [self.toolbar setItems:@[self.closeButton, flexibleSpaceButton, self.backButton, fixedSpaceButton, self.forwardButton]];
+    
+    // sharing is caring ☺️
+    self.shareButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAction target:self action:@selector(goFigure:)];
+    self.shareButton.enabled = YES;
+    self.shareButton.imageInsets = UIEdgeInsetsZero;//    self.shareButton.width = 38.000;
 
     self.view.backgroundColor = [UIColor grayColor];
     [self.view addSubview:self.toolbar];
@@ -667,6 +683,21 @@
     NSMutableArray* items = [self.toolbar.items mutableCopy];
     [items replaceObjectAtIndex:0 withObject:self.closeButton];
     [self.toolbar setItems:items];
+}
+
+- (void)showShareButtons:(BOOL)show
+{
+    NSLog(@"showShareButtons %d", show);
+//    self.share = show;
+}
+
+- (void)showNavButtons:(BOOL)show
+{
+    if (show == YES) {
+//        [array addObjectsFromArray:@[self.toolbarItems, self.backButton, fixedSpaceButton, self.forwardButto//n]];
+        [self.toolbar setItems: @[self.toolbarItems, self.backButton, self.fixedSpaceButton, self.forwardButton]];
+//        self.toolbarItems
+    }
 }
 
 - (void)showLocationBar:(BOOL)show
@@ -839,6 +870,11 @@
     }
 }
 
+- (void)goFigure:(id)sender
+{
+    [self.navigationDelegate goFigure];
+}
+
 - (void)goBack:(id)sender
 {
     [self.webView goBack];
@@ -983,6 +1019,8 @@
         // default values
         self.location = YES;
         self.toolbar = YES;
+        self.nav = YES;
+        self.share = YES;
         self.closebuttoncaption = nil;
         self.toolbarposition = kInAppBrowserToolbarBarPositionBottom;
         self.clearcache = NO;
