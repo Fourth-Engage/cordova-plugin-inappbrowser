@@ -225,6 +225,8 @@ static CDVWKInAppBrowser* instance = nil;
         }
     }
     
+    [self.inAppBrowserViewController showNavButtons:browserOptions.nav];
+    [self.inAppBrowserViewController showShareButtons:browserOptions.share];
     [self.inAppBrowserViewController showLocationBar:browserOptions.location];
     [self.inAppBrowserViewController showToolBar:browserOptions.toolbar :browserOptions.toolbarposition];
     if (browserOptions.closebuttoncaption != nil || browserOptions.closebuttoncolor != nil) {
@@ -700,6 +702,15 @@ static CDVWKInAppBrowser* instance = nil;
     _previousStatusBarStyle = -1; // this value was reset before reapplying it. caused statusbar to stay black on ios7
 }
 
+- (void)share
+{
+    CDVPluginResult* pluginResult = [CDVPluginResult
+                                     resultWithStatus:CDVCommandStatus_OK
+                                     messageAsDictionary:@{@"type":@"share"}];
+    [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackId];
+}
+
 @end //CDVWKInAppBrowser
 
 #pragma mark CDVWKInAppBrowserViewController
@@ -807,10 +818,10 @@ BOOL isExiting = FALSE;
     self.closeButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(close)];
     self.closeButton.enabled = YES;
     
-    UIBarButtonItem* flexibleSpaceButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
+    self.flexibleSpaceButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
     
-    UIBarButtonItem* fixedSpaceButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFixedSpace target:nil action:nil];
-    fixedSpaceButton.width = 20;
+    self.fixedSpaceButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFixedSpace target:nil action:nil];
+    self.fixedSpaceButton.width = 20;
     
     float toolbarY = toolbarIsAtBottom ? self.view.bounds.size.height - TOOLBAR_HEIGHT : 0.0;
     CGRect toolbarFrame = CGRectMake(0.0, toolbarY, self.view.bounds.size.width, TOOLBAR_HEIGHT);
@@ -882,11 +893,16 @@ BOOL isExiting = FALSE;
       self.backButton.tintColor = [self colorFromHexString:_browserOptions.navigationbuttoncolor];
     }
 
+    // sharing is caring 😅 -- create a default sharing icon button
+    self.shareButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAction target:self action:@selector(sendShare:)];
+    self.shareButton.enabled = YES;
+    self.shareButton.imageInsets = UIEdgeInsetsZero;
+    
     // Filter out Navigation Buttons if user requests so
     if (_browserOptions.hidenavigationbuttons) {
-      [self.toolbar setItems:@[self.closeButton, flexibleSpaceButton]];
+        [self.toolbar setItems:@[self.closeButton, self.flexibleSpaceButton]];
     } else {
-      [self.toolbar setItems:@[self.closeButton, flexibleSpaceButton, self.backButton, fixedSpaceButton, self.forwardButton]];
+        [self.toolbar setItems:@[self.closeButton, self.flexibleSpaceButton, self.backButton, self.fixedSpaceButton, self.forwardButton]];
     }
     
     self.view.backgroundColor = [UIColor grayColor];
@@ -914,6 +930,27 @@ BOOL isExiting = FALSE;
     NSMutableArray* items = [self.toolbar.items mutableCopy];
     [items replaceObjectAtIndex:0 withObject:self.closeButton];
     [self.toolbar setItems:items];
+}
+
+- (void)showNavButtons:(BOOL)show
+{
+    if (show == YES) {
+        NSMutableArray* items = [self.toolbar.items mutableCopy];
+        [items addObject:self.backButton];
+        [items addObject:self.fixedSpaceButton];
+        [items addObject:self.forwardButton];
+        [self.toolbar setItems:items];
+    }
+}
+
+- (void)showShareButtons:(BOOL)show
+{
+    if (show == YES) {
+        NSMutableArray* items = [self.toolbar.items mutableCopy];
+        [items addObject:self.fixedSpaceButton];
+        [items addObject:self.shareButton];
+        [self.toolbar setItems:items];
+    }
 }
 
 - (void)showLocationBar:(BOOL)show
@@ -1084,6 +1121,11 @@ BOOL isExiting = FALSE;
             [weakSelf.webView loadRequest:request];
         }];
     }
+}
+
+- (void)sendShare:(id)sender
+{
+    [self.navigationDelegate share];
 }
 
 - (void)goBack:(id)sender

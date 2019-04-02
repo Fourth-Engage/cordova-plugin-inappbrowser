@@ -65,6 +65,14 @@
     }
 }
 
+- (void)share:(CDVInvokedUrlCommand*)command
+{
+    if(self.usewkwebview){
+        [[CDVWKInAppBrowser getInstance] share:command];
+    }else{
+        [[CDVUIInAppBrowser getInstance] share:command];
+    }
+}
 
 - (void)show:(CDVInvokedUrlCommand*)command
 {

@@ -64,6 +64,9 @@
 @property (nonatomic, strong) IBOutlet UIActivityIndicatorView* spinner;
 @property (nonatomic, strong) IBOutlet UIToolbar* toolbar;
 @property (nonatomic, strong) IBOutlet CDVWKInAppBrowserUIDelegate* webViewUIDelegate;
+@property (nonatomic, strong) IBOutlet UIBarButtonItem* shareButton;
+@property (nonatomic, strong) IBOutlet UIBarButtonItem* flexibleSpaceButton;
+@property (nonatomic, strong) IBOutlet UIBarButtonItem* fixedSpaceButton;
 
 @property (nonatomic, weak) id <CDVScreenOrientationDelegate> orientationDelegate;
 @property (nonatomic, weak) CDVWKInAppBrowser* navigationDelegate;
@@ -71,6 +74,8 @@
 
 - (void)close;
 - (void)navigateTo:(NSURL*)url;
+- (void)showShareButtons:(BOOL)show;
+- (void)showNavButtons:(BOOL)show;
 - (void)showLocationBar:(BOOL)show;
 - (void)showToolBar:(BOOL)show : (NSString *) toolbarPosition;
 - (void)setCloseButtonTitle:(NSString*)title : (NSString*) colorString;
