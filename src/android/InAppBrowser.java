@@ -1180,6 +1180,12 @@ public class InAppBrowser extends CordovaPlugin {
          * @param method
          */
         public boolean shouldOverrideUrlLoading(String url, String method) {
+            String playstoreUrl = "https://play.google.com/store/apps/details";
+
+            if(url.startsWith(playstoreUrl)) {
+                url = url.replace(playstoreUrl,"market://details");
+            }
+
             boolean override = false;
             boolean useBeforeload = false;
             String errorMessage = null;
@@ -1226,7 +1232,7 @@ public class InAppBrowser extends CordovaPlugin {
                 } catch (android.content.ActivityNotFoundException e) {
                     LOG.e(LOG_TAG, "Error dialing " + url + ": " + e.toString());
                 }
-            } else if (url.startsWith("geo:") || url.startsWith(WebView.SCHEME_MAILTO) || url.startsWith("market:") || url.startsWith("intent:")) {
+            } else if (url.startsWith("geo:") || url.startsWith(WebView.SCHEME_MAILTO) || url.startsWith("market:")) {
                 try {
                     Intent intent = new Intent(Intent.ACTION_VIEW);
                     intent.setData(Uri.parse(url));
@@ -1234,6 +1240,21 @@ public class InAppBrowser extends CordovaPlugin {
                     override = true;
                 } catch (android.content.ActivityNotFoundException e) {
                     LOG.e(LOG_TAG, "Error with " + url + ": " + e.toString());
+                }
+            }else if (url.startsWith("intent:")) {
+                try {
+                    Intent intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME);
+
+                    try {
+                        cordova.getActivity().startActivity(intent);
+                        override = true;
+                    } catch (android.content.ActivityNotFoundException e) {
+                        LOG.e(LOG_TAG, "No Activity found for intent " + url + ": " + e.toString());
+                        String fallbackUrl = intent.getStringExtra("browser_fallback_url");
+                        webView.loadUrl(fallbackUrl);
+                    }
+                } catch (URISyntaxException e) {
+                    e.printStackTrace();
                 }
             }
             // If sms:5551212?body=This is the message
