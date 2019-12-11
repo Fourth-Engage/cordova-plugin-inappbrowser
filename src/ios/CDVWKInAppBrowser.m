@@ -45,6 +45,7 @@
 @interface CDVWKInAppBrowser () {
     NSInteger _previousStatusBarStyle;
 }
+
 @end
 
 @implementation CDVWKInAppBrowser
@@ -673,6 +674,17 @@ static CDVWKInAppBrowser* instance = nil;
     [self.inAppBrowserViewController.webView setNavigationDelegate:nil];
     self.inAppBrowserViewController.webView = nil;
     
+    [self.inAppBrowserViewController.externalWebViews enumerateObjectsUsingBlock:^(WKWebView *_Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        [obj stopLoading];
+        [obj removeFromSuperview];
+
+        obj.navigationDelegate = nil;
+        obj.UIDelegate = nil;
+    }];
+    
+    [self.inAppBrowserViewController.externalWebViews removeAllObjects];
+    self.inAppBrowserViewController.externalWebViews = nil;
+    
     // Set navigationDelegate to nil to ensure no callbacks are received from it.
     self.inAppBrowserViewController.navigationDelegate = nil;
     self.inAppBrowserViewController = nil;
@@ -714,8 +726,6 @@ BOOL isExiting = FALSE;
         _userAgent = userAgent;
         _prevUserAgent = prevUserAgent;
         _browserOptions = browserOptions;
-        self.webViewUIDelegate = [[CDVWKInAppBrowserUIDelegate alloc] initWithTitle:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleDisplayName"]];
-        [self.webViewUIDelegate setViewController:self];
         
         [self createViews];
     }
@@ -763,25 +773,13 @@ BOOL isExiting = FALSE;
     [self.view addSubview:self.webView];
     [self.view sendSubviewToBack:self.webView];
     
+    [self configureWebView:self.webView];
     
-    self.webView.navigationDelegate = self;
-    self.webView.UIDelegate = self.webViewUIDelegate;
-    self.webView.backgroundColor = [UIColor whiteColor];
-    
-    self.webView.clearsContextBeforeDrawing = YES;
-    self.webView.clipsToBounds = YES;
-    self.webView.contentMode = UIViewContentModeScaleToFill;
-    self.webView.multipleTouchEnabled = YES;
-    self.webView.opaque = YES;
-    self.webView.userInteractionEnabled = YES;
     self.automaticallyAdjustsScrollViewInsets = YES ;
-    [self.webView setAutoresizingMask:UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth];
-    self.webView.allowsLinkPreview = NO;
-    self.webView.allowsBackForwardNavigationGestures = NO;
     
 #if __IPHONE_OS_VERSION_MAX_ALLOWED >= 110000
    if (@available(iOS 11.0, *)) {
-	   [self.webView.scrollView setContentInsetAdjustmentBehavior:UIScrollViewContentInsetAdjustmentNever];
+       [self.webView.scrollView setContentInsetAdjustmentBehavior:UIScrollViewContentInsetAdjustmentNever];
    }
 #endif
     
@@ -894,6 +892,24 @@ BOOL isExiting = FALSE;
     [self.view addSubview:self.toolbar];
     [self.view addSubview:self.addressLabel];
     [self.view addSubview:self.spinner];
+}
+
+- (void)configureWebView:(WKWebView *)someWebView
+{
+    someWebView.navigationDelegate = self;
+    someWebView.UIDelegate = self;
+    someWebView.backgroundColor = [UIColor whiteColor];
+    
+    someWebView.clearsContextBeforeDrawing = YES;
+    someWebView.clipsToBounds = YES;
+    someWebView.contentMode = UIViewContentModeScaleToFill;
+    someWebView.multipleTouchEnabled = YES;
+    someWebView.opaque = YES;
+    someWebView.userInteractionEnabled = YES;
+
+    [someWebView setAutoresizingMask:UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth];
+    someWebView.allowsLinkPreview = NO;
+    someWebView.allowsBackForwardNavigationGestures = NO;
 }
 
 - (void) setWebViewFrame : (CGRect) frame {
@@ -1115,7 +1131,16 @@ BOOL isExiting = FALSE;
 
 - (void)goBack:(id)sender
 {
-    [self.webView goBack];
+    WKWebView *someWebview = self.externalWebViews.lastObject;
+    if (someWebview) {
+        if (someWebview.canGoBack) {
+            [someWebview goBack];
+        } else {
+            [self removeWebView:someWebview];
+        }
+    } else {
+        [self.webView goBack];
+    }
 }
 
 - (void)goForward:(id)sender
@@ -1167,6 +1192,33 @@ BOOL isExiting = FALSE;
     return [UIColor colorWithRed:((rgbValue & 0xFF0000) >> 16)/255.0 green:((rgbValue & 0xFF00) >> 8)/255.0 blue:(rgbValue & 0xFF)/255.0 alpha:1.0];
 }
 
+- (void)addWebView:(WKWebView *)someWebView
+{
+    [self.view insertSubview:someWebView aboveSubview:self.externalWebViews.lastObject ?: self.webView];
+    [self configureWebView:someWebView];
+
+    if (self.externalWebViews) {
+        [self.externalWebViews addObject:someWebView];
+    } else {
+        self.externalWebViews = [[NSMutableArray alloc] initWithObjects:someWebView, nil];
+    }
+}
+
+- (void)removeWebView:(WKWebView *)someWebView
+{
+    [someWebView removeFromSuperview];
+    someWebView.UIDelegate = nil;
+    someWebView.navigationDelegate = nil;
+    
+    if (self.externalWebViews) {
+        [self.externalWebViews removeObject:someWebView];
+        
+        if (self.externalWebViews.count == 0) {
+            self.externalWebViews = nil;
+        }
+    }
+}
+
 #pragma mark WKNavigationDelegate
 
 - (void)webView:(WKWebView *)theWebView didStartProvisionalNavigation:(WKNavigation *)navigation{
@@ -1174,7 +1226,7 @@ BOOL isExiting = FALSE;
     // loading url, start spinner, update back/forward
     
     self.addressLabel.text = NSLocalizedString(@"Loading...", nil);
-    self.backButton.enabled = theWebView.canGoBack;
+    self.backButton.enabled = theWebView.canGoBack || self.externalWebViews.count > 0;
     self.forwardButton.enabled = theWebView.canGoForward;
     
     NSLog(_browserOptions.hidespinner ? @"Yes" : @"No");
@@ -1204,7 +1256,7 @@ BOOL isExiting = FALSE;
     // update url, stop spinner, update back/forward
     
     self.addressLabel.text = [self.currentURL absoluteString];
-    self.backButton.enabled = theWebView.canGoBack;
+    self.backButton.enabled = theWebView.canGoBack || self.externalWebViews.count > 0;
     self.forwardButton.enabled = theWebView.canGoForward;
     theWebView.scrollView.contentInset = UIEdgeInsetsZero;
     
@@ -1235,7 +1287,7 @@ BOOL isExiting = FALSE;
     // log fail message, stop spinner, update back/forward
     NSLog(@"webView:%@ - %ld: %@", delegateName, (long)error.code, [error localizedDescription]);
     
-    self.backButton.enabled = theWebView.canGoBack;
+    self.backButton.enabled = theWebView.canGoBack || self.externalWebViews.count > 0;
     self.forwardButton.enabled = theWebView.canGoForward;
     [self.spinner stopAnimating];
     
@@ -1291,5 +1343,97 @@ BOOL isExiting = FALSE;
     return YES;
 }
 
+#pragma mark WKUIDelegate
+
+- (void)     webView:(WKWebView*)webView runJavaScriptAlertPanelWithMessage:(NSString*)message
+    initiatedByFrame:(WKFrameInfo*)frame completionHandler:(void (^)(void))completionHandler
+{
+    UIAlertController* alert = [UIAlertController alertControllerWithTitle:self.title
+                                                                   message:message
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+
+    UIAlertAction* ok = [UIAlertAction actionWithTitle:NSLocalizedString(@"OK", @"OK")
+                                                 style:UIAlertActionStyleDefault
+                                               handler:^(UIAlertAction* action)
+        {
+            completionHandler();
+            [alert dismissViewControllerAnimated:YES completion:nil];
+        }];
+
+    [alert addAction:ok];
+
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)     webView:(WKWebView*)webView runJavaScriptConfirmPanelWithMessage:(NSString*)message
+    initiatedByFrame:(WKFrameInfo*)frame completionHandler:(void (^)(BOOL result))completionHandler
+{
+    UIAlertController* alert = [UIAlertController alertControllerWithTitle:self.title
+                                                                   message:message
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+
+    UIAlertAction* ok = [UIAlertAction actionWithTitle:NSLocalizedString(@"OK", @"OK")
+                                                 style:UIAlertActionStyleDefault
+                                               handler:^(UIAlertAction* action)
+        {
+            completionHandler(YES);
+            [alert dismissViewControllerAnimated:YES completion:nil];
+        }];
+
+    [alert addAction:ok];
+
+    UIAlertAction* cancel = [UIAlertAction actionWithTitle:NSLocalizedString(@"Cancel", @"Cancel")
+                                                     style:UIAlertActionStyleDefault
+                                                   handler:^(UIAlertAction* action)
+        {
+            completionHandler(NO);
+            [alert dismissViewControllerAnimated:YES completion:nil];
+        }];
+    [alert addAction:cancel];
+
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)      webView:(WKWebView*)webView runJavaScriptTextInputPanelWithPrompt:(NSString*)prompt
+          defaultText:(NSString*)defaultText initiatedByFrame:(WKFrameInfo*)frame
+    completionHandler:(void (^)(NSString* result))completionHandler
+{
+    UIAlertController* alert = [UIAlertController alertControllerWithTitle:self.title
+                                                                   message:prompt
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+
+    UIAlertAction* ok = [UIAlertAction actionWithTitle:NSLocalizedString(@"OK", @"OK")
+                                                 style:UIAlertActionStyleDefault
+                                               handler:^(UIAlertAction* action)
+        {
+            completionHandler(((UITextField*)alert.textFields[0]).text);
+            [alert dismissViewControllerAnimated:YES completion:nil];
+        }];
+
+    [alert addAction:ok];
+
+    UIAlertAction* cancel = [UIAlertAction actionWithTitle:NSLocalizedString(@"Cancel", @"Cancel")
+                                                     style:UIAlertActionStyleDefault
+                                                   handler:^(UIAlertAction* action)
+        {
+            completionHandler(nil);
+            [alert dismissViewControllerAnimated:YES completion:nil];
+        }];
+    [alert addAction:cancel];
+
+    [alert addTextFieldWithConfigurationHandler:^(UITextField* textField) {
+        textField.text = defaultText;
+    }];
+
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (WKWebView *)webView:(WKWebView *)webView createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration forNavigationAction:(WKNavigationAction *)navigationAction windowFeatures:(WKWindowFeatures *)windowFeatures
+{
+    WKWebView *newWebView = [[WKWebView alloc] initWithFrame:webView.frame configuration:configuration];
+    [self addWebView:newWebView];
+    
+    return newWebView;
+}
 
 @end //CDVWKInAppBrowserViewController
